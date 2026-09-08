@@ -1,3 +1,20 @@
 <!doctype html>
 <meta charset="utf-8" />
 <title>Curtain</title>
+<style>
+  body { width: 240px; margin: 0; padding: 14px; font-family: -apple-system, system-ui, sans-serif; font-size: 13px; color: #1d1d1f; }
+  h1 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+  .status { color: #6e6e73; font-size: 12px; margin-bottom: 12px; }
+  button { width: 100%; padding: 7px; border: 0; border-radius: 7px; background: #0071e3; color: #fff; font: inherit; cursor: pointer; margin-bottom: 7px; }
+  button.ghost { background: #f0f0f2; color: #1d1d1f; }
+  button:disabled { opacity: .45; cursor: default; }
+  .hint { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e5e7; color: #6e6e73; font-size: 11px; }
+  kbd { background: #f0f0f2; border: 1px solid #d0d0d5; border-radius: 4px; padding: 1px 5px; font-size: 11px; }
+</style>
+<h1>Curtain</h1>
+<div class="status" id="status">Checking…</div>
+<button id="cover" disabled>Cover now</button>
+<button id="options" class="ghost">Profiles &amp; settings</button>
+<div class="hint">Hotkey: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>W</kbd> locks and unlocks the cover. Change it at <code>chrome://extensions/shortcuts</code>.</div>
+<script src="lib/profiles.js"></script>
+<script src="popup.js"></script>

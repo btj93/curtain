@@ -1,8 +1,30 @@
 <!doctype html>
 <meta charset="utf-8" />
-<title>Curtain</title>
-<p>Temporary scaffold, replaced in Task 9.</p>
-<input type="text" id="origin" size="40" value="https://example.com" />
-<button id="grant">Grant access</button>
-<div id="out"></div>
-<script src="options-stub.js"></script>
+<title>Curtain — profiles</title>
+<style>
+  body { max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; font-family: -apple-system, system-ui, sans-serif; font-size: 14px; color: #1d1d1f; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: #6e6e73; font-size: 13px; margin: 0 0 20px; }
+  .card { border: 1px solid #e0e0e4; border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+  .card.disabled { opacity: .55; }
+  .row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .row .grow { flex: 1; }
+  label.check { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; cursor: pointer; font-size: 13px; }
+  .desc { color: #6e6e73; font-size: 11px; }
+  input[type=text] { width: 100%; padding: 6px 8px; border: 1px solid #d0d0d5; border-radius: 6px; font: inherit; }
+  textarea { width: 100%; min-height: 62px; padding: 6px 8px; border: 1px solid #d0d0d5; border-radius: 6px; font: 12px "SF Mono", Menlo, monospace; resize: vertical; }
+  select { padding: 5px 8px; border: 1px solid #d0d0d5; border-radius: 6px; font: inherit; }
+  button { padding: 6px 12px; border: 0; border-radius: 7px; background: #0071e3; color: #fff; font: inherit; cursor: pointer; }
+  button.danger { background: #f0f0f2; color: #c0392b; }
+  .warn { background: #fff5e6; border: 1px solid #f5c98a; border-radius: 7px; padding: 9px 11px; font-size: 12px; margin: 10px 0; }
+  .err { color: #c0392b; font-size: 12px; min-height: 16px; }
+  .empty { color: #6e6e73; text-align: center; padding: 30px 0; }
+</style>
+<h1>Curtain</h1>
+<p class="sub">A profile decides which sites get covered and what the cover looks like. The first enabled profile matching a page wins. Paste a page URL and it is reduced to its site.</p>
+<div id="list"></div>
+<button id="add">Add profile</button>
+<script src="lib/profiles.js"></script>
+<script src="skins/ide.js"></script>
+<script src="skins/index.js"></script>
+<script src="options.js"></script>
