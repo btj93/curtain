@@ -1,0 +1,19 @@
+const CT_BUILTIN_SKINS = [
+  (typeof module !== 'undefined' && module.exports) ? require('./ide.js').CT_SKIN_IDE : CT_SKIN_IDE,
+];
+
+// Falls back rather than returning null: a profile can point at a skin a removed plugin
+// took with it, and failing to cover is the one outcome that exposes the page.
+function resolveSkin(skins, skinId) {
+  if (!skins || !skins.length) return null;
+  for (let i = 0; i < skins.length; i++) if (skins[i].id === skinId) return skins[i];
+  return skins[0];
+}
+
+function listSkins(skins) {
+  return (skins || []).map(function (s) { return { id: s.id, name: s.name }; });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { CT_BUILTIN_SKINS, resolveSkin, listSkins };
+}
