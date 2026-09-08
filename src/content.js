@@ -7,9 +7,12 @@
   let mode = 'hidden';
   let hostEl = null;
   let shadow = null;
+  let coverFrame = null;
+  let mountKey = null;
   let chromeGuard = null;
   let signal = CT_IDLE_SIGNAL;
   let signalAt = 0;
+  let attachedPluginId;
   let plugins = [];
   // A probe must keep re-emitting to stay live. Held indefinitely, `live` would leave the
   // indicator spinning after the probe died, which is the opposite of proof of life.
@@ -23,13 +26,19 @@
     const got = await chrome.storage.local.get({ profiles: [], plugins: [] });
     plugins = got.plugins || [];
     profile = pickProfileForUrl((got.profiles || []).map(normalizeProfile), location.href);
-    // Dropped whenever the profile or plugin set changes. A standing alert would otherwise
-    // outlive the probe that raised it: detaching the plugin unregisters the probe, so no
-    // further signal can ever arrive, and with auto-reveal on the page stays uncovered
-    // forever with nothing left in the system able to clear it.
-    signal = CT_IDLE_SIGNAL;
-    signalAt = 0;
+    // Dropped only when the attached plugin changes, not on every profile write. A standing
+    // alert must not outlive the probe that raised it, since detaching a plugin unregisters
+    // its probe and no further signal can ever arrive. But this runs on any storage change,
+    // and clearing on all of them means toggling a checkbox or the input-layer hotkey
+    // silently wipes a farm alert you still need to see.
+    const nextPluginId = profile ? profile.pluginId : null;
+    if (nextPluginId !== attachedPluginId) {
+      attachedPluginId = nextPluginId;
+      signal = CT_IDLE_SIGNAL;
+      signalAt = 0;
+    }
     if (!profile) { teardown(); return; }
+    if (hostEl && mountKey !== coverKey()) { applyMode('hidden'); dropCover(); }
     pushKeepAlive();
     recompute();
   }
@@ -37,6 +46,7 @@
   function teardown() {
     manualForce = false;
     applyMode('hidden');
+    dropCover();
     pushKeepAlive();
   }
 
@@ -82,11 +92,15 @@
     mode = next;
     if (willVisible && !wasVisible) showCover();
     else if (!willVisible && wasVisible) hideCover();
+    const layer = (profile && profile.inputLayer) || (next === 'peek' ? 'page' : 'cover');
+    const onCover = willVisible && !!profile && layer === 'cover';
     if (willVisible && hostEl && profile) {
-      const peek = next === 'peek';
-      setHost('opacity', peek ? String(profile.options.peekOpacity) : '1');
-      setHost('pointer-events', peek ? 'none' : 'auto');
+      setHost('opacity', next === 'peek' ? String(profile.options.peekOpacity) : '1');
+      setHost('pointer-events', onCover ? 'auto' : 'none');
     }
+    // Pointer events alone do not move the caret: keystrokes reach a frame only while it
+    // holds focus, so the two have to be set together.
+    if (coverFrame) { if (onCover) coverFrame.focus(); else coverFrame.blur(); }
     setTabMute(willVisible && !!(profile && profile.options.mute));
   }
 
@@ -110,6 +124,24 @@
 
   function skin() { return resolveSkin(allSkins(plugins), profile && profile.skinId); }
 
+  function coverKey() {
+    const s = skin();
+    if (!s || !profile) return null;
+    return s.id + '\n' + (coverUrlFor(profile.coverUrl, s) || '') + '\n' + (s.html || '');
+  }
+
+  // A mounted cover survives a hidden mode, so nothing else would ever unmount it: editing a
+  // profile would leave the old cover on screen, and a url cover's frame would keep loading a
+  // real site behind the hidden host for the life of the tab.
+  function dropCover() {
+    if (!hostEl) return;
+    hostEl.remove();
+    hostEl = null;
+    shadow = null;
+    coverFrame = null;
+    mountKey = null;
+  }
+
   function ensureCover() {
     if (hostEl) return;
     const s = skin();
@@ -129,11 +161,23 @@
     // Closed, so the covered page cannot reach the cover's contents via hostEl.shadowRoot.
     shadow = hostEl.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
-    style.textContent = s.css;
+    style.textContent = s.css || '';
     shadow.appendChild(style);
-    const wrap = document.createElement('div');
-    wrap.innerHTML = s.html;
-    while (wrap.firstChild) shadow.appendChild(wrap.firstChild);
+    const url = coverUrlFor(profile && profile.coverUrl, s);
+    if (url) {
+      coverFrame = document.createElement('iframe');
+      // Set before src: the permission is delegated at load, so adding it afterwards would
+      // mean reloading the frame for it to count.
+      coverFrame.setAttribute('allow', 'storage-access');
+      coverFrame.style.cssText = 'width:100%;height:100%;border:0;display:block';
+      coverFrame.src = url;
+      shadow.appendChild(coverFrame);
+    } else {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = s.html;
+      while (wrap.firstChild) shadow.appendChild(wrap.firstChild);
+    }
+    mountKey = coverKey();
     (document.documentElement || document.body).appendChild(hostEl);
   }
 
@@ -181,6 +225,9 @@
     const want = (d.alert ? (s.titleAlertPrefix || '') : '') + s.title;
     if (document.title !== want) setTitle(want);
     applyDisguiseFavicon(d.alert ? (s.faviconAlert || s.favicon) : s.favicon);
+    // A page we do not control has no slots, so the title and favicon above are the whole
+    // channel a plugin's signal has in this mode.
+    if (coverFrame) return;
 
     const root = shadow && shadow.querySelector('.ct-root');
     if (!root) return;

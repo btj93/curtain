@@ -30,6 +30,13 @@ function normalizeOrigin(s) {
   }
 }
 
+// Validated by normalizeOrigin but not reduced to it: the cover is a page, not a site,
+// so the path and query the user typed have to survive.
+function normalizeCoverUrl(s) {
+  const t = String(s == null ? '' : s).trim();
+  return normalizeOrigin(t) ? t : null;
+}
+
 function clampOpacity(v) {
   const n = Number(v);
   if (!isFinite(n)) return CT_DEFAULT_OPTIONS.peekOpacity;
@@ -53,6 +60,11 @@ function normalizeProfile(raw) {
     enabled: p.enabled !== false,
     origins: origins,
     skinId: String(p.skinId || 'ide'),
+    coverUrl: normalizeCoverUrl(p.coverUrl),
+    // null means follow the mode. A single value cannot preserve both of the old
+    // behaviours, since peek meant click-through and cover meant click-blocking, so any
+    // fixed default breaks one of them. Automatic is the default; the hotkey overrides.
+    inputLayer: (p.inputLayer === 'page' || p.inputLayer === 'cover') ? p.inputLayer : null,
     pluginId: (typeof p.pluginId === 'string' && p.pluginId) ? p.pluginId : null,
     options: options,
   };

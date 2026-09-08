@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { CT_BUILTIN_SKINS, resolveSkin, listSkins, skinKind } = require('../src/skins/index.js');
+const { CT_BUILTIN_SKINS, resolveSkin, listSkins, skinKind, coverUrlFor } = require('../src/skins/index.js');
 
 test('the built-in set is non-empty and every skin is complete', () => {
   assert.ok(CT_BUILTIN_SKINS.length >= 1);
@@ -67,6 +67,22 @@ test('skinKind names an html skin and a url skin correctly', () => {
 
 test('skinKind calls every built-in html', () => {
   for (const s of CT_BUILTIN_SKINS) assert.equal(skinKind(s), 'html', s.id);
+});
+
+test('the profile url wins, then the skin url, then nothing', () => {
+  const urlSkin = { id: 's', name: 'S', title: 'T', favicon: 'data:,', url: 'https://example.com/skin' };
+  const htmlSkin = { id: 's', name: 'S', title: 'T', favicon: 'data:,', html: '<div class="ct-root"></div>', css: '' };
+  assert.equal(coverUrlFor('https://example.com/mine', urlSkin), 'https://example.com/mine');
+  assert.equal(coverUrlFor('https://example.com/mine', htmlSkin), 'https://example.com/mine');
+  assert.equal(coverUrlFor(null, urlSkin), 'https://example.com/skin');
+  assert.equal(coverUrlFor(null, htmlSkin), null);
+  assert.equal(coverUrlFor(null, null), null);
+});
+
+// parsePlugin writes '' for an absent optional key, so an html skin carries url: ''.
+test('an empty url on either side is not a cover url', () => {
+  assert.equal(coverUrlFor('', { id: 's', url: '' }), null);
+  assert.equal(coverUrlFor('', { id: 's', url: 'https://example.com/skin' }), 'https://example.com/skin');
 });
 
 test('allSkins tolerates plugins with no skins', () => {

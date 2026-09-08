@@ -10,6 +10,10 @@
     "toggle-cover": {
       "suggested_key": { "default": "Alt+Shift+W" },
       "description": "Lock/unlock the cover"
+    },
+    "toggle-input-layer": {
+      "suggested_key": { "default": "Alt+Shift+E" },
+      "description": "Send clicks and typing to the cover or to the page"
     }
   },
   "options_page": "src/options.html",

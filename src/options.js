@@ -235,6 +235,93 @@ function card(p, index) {
   skinRow.append(skinLabel, skinSel, pluginLabel, pluginSel);
   el.appendChild(skinRow);
 
+  const coverRow = document.createElement('div');
+  coverRow.className = 'row';
+  const coverLabel = document.createElement('span');
+  coverLabel.textContent = 'Cover URL:';
+  const coverInput = document.createElement('input');
+  coverInput.type = 'text';
+  coverInput.className = 'grow';
+  coverInput.placeholder = 'https://example.com/app (leave blank to use the skin)';
+  coverInput.value = p.coverUrl || '';
+  coverRow.append(coverLabel, coverInput);
+  el.appendChild(coverRow);
+
+  const coverErr = document.createElement('div');
+  coverErr.className = 'err';
+  el.appendChild(coverErr);
+
+  const coverWarn = document.createElement('div');
+  coverWarn.textContent = 'If this page needs a login, it will very likely show its own login '
+    + 'screen instead of your session. A page shown inside a cover is treated as a different '
+    + 'site from the one it covers, and browsers usually withhold that site’s cookies from '
+    + 'a cross-site frame. There is no setting in Curtain that fixes this.';
+  el.appendChild(coverWarn);
+
+  const coverDesc = document.createElement('div');
+  coverDesc.className = 'desc';
+  coverDesc.textContent = 'When set, this profile covers with this live page instead of the '
+    + 'chosen skin. The skin above still supplies the tab title and favicon.';
+  el.appendChild(coverDesc);
+
+  // Amber only once a URL is actually set. The same class marks a profile that is doing
+  // nothing until you grant access, and a permanent second amber box on every card would
+  // train you to ignore both.
+  function syncCoverNotes() {
+    coverWarn.className = p.coverUrl ? 'warn' : 'desc';
+  }
+  syncCoverNotes();
+
+  coverInput.addEventListener('change', () => {
+    const raw = coverInput.value.trim();
+    if (!raw) {
+      coverErr.textContent = '';
+      p.coverUrl = null;
+      syncCoverNotes();
+      save();
+      return;
+    }
+    let protocol = null;
+    try { protocol = new URL(raw).protocol; } catch (_) { protocol = null; }
+    if (protocol !== 'http:' && protocol !== 'https:') {
+      coverErr.textContent = 'Not a usable URL: ' + raw
+        + ' — expected e.g. https://example.com/app (http and https only)';
+      return;
+    }
+    coverErr.textContent = '';
+    p.coverUrl = raw;
+    syncCoverNotes();
+    save();
+  });
+
+  const layerRow = document.createElement('div');
+  layerRow.className = 'row';
+  const layerLabel = document.createElement('span');
+  layerLabel.textContent = 'Input goes to:';
+  const layerSel = document.createElement('select');
+  [['', 'Automatic'], ['cover', 'Cover'], ['page', 'Page']].forEach(([value, text]) => {
+    const o = document.createElement('option');
+    o.value = value;
+    o.textContent = text;
+    layerSel.appendChild(o);
+  });
+  layerSel.value = p.inputLayer || '';
+  layerSel.addEventListener('change', () => { p.inputLayer = layerSel.value || null; save(); });
+  const layerHotkey = document.createElement('span');
+  layerHotkey.className = 'desc';
+  layerHotkey.textContent = 'Alt+Shift+E';
+  layerRow.append(layerLabel, layerSel, layerHotkey);
+  el.appendChild(layerRow);
+
+  const layerDesc = document.createElement('div');
+  layerDesc.className = 'desc';
+  layerDesc.textContent = 'Decides whether your clicks and typing reach the cover or the page '
+    + 'underneath it while the cover is up. Automatic means the see-through cover stays '
+    + 'click-through and the solid one blocks, which is how it has always behaved. Choose '
+    + 'Cover to work in a live cover page, including a see-through one over the page you '
+    + 'are hiding.';
+  el.appendChild(layerDesc);
+
   CT_PROFILE_OPTIONS.forEach(({ key, title, desc }) => {
     const l = document.createElement('label');
     l.className = 'check';

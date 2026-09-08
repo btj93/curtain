@@ -14,6 +14,13 @@ function skinKind(skin) {
   return skin && skin.url ? 'url' : 'html';
 }
 
+// The profile wins, so a user can point a url skin somewhere else without editing the
+// plugin that supplied it. Both inputs are validated where they enter storage:
+// normalizeProfile for the profile field, parsePlugin for the skin's.
+function coverUrlFor(profileCoverUrl, skin) {
+  return profileCoverUrl || (skin && skin.url) || null;
+}
+
 function listSkins(skins) {
   return (skins || []).map(function (s) { return { id: s.id, name: s.name }; });
 }
@@ -29,5 +36,5 @@ function allSkins(plugins) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CT_BUILTIN_SKINS, resolveSkin, listSkins, allSkins, skinKind };
+  module.exports = { CT_BUILTIN_SKINS, resolveSkin, listSkins, allSkins, skinKind, coverUrlFor };
 }

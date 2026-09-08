@@ -121,10 +121,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // chrome.commands fires only here, never in a content script, hence the relay.
 chrome.commands.onCommand.addListener(async (command) => {
-  if (command !== 'toggle-cover') return;
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (!tab || tab.id == null) return;
   const profiles = await loadProfiles();
-  if (!pickProfileForUrl(profiles, tab.url || '')) return;
-  chrome.tabs.sendMessage(tab.id, { type: 'toggle-cover' }).catch(() => {});
+  const profile = pickProfileForUrl(profiles, tab.url || '');
+  if (!profile) return;
+  if (command === 'toggle-cover') {
+    chrome.tabs.sendMessage(tab.id, { type: 'toggle-cover' }).catch(() => {});
+  } else if (command === 'toggle-input-layer') {
+    // Written to storage rather than messaged to the tab, so the layout survives a reload.
+    // The engine picks it up through its own storage listener.
+    // Cycles through automatic, so the keyboard can get back to mode-derived behaviour
+    // without opening the options page.
+    profile.inputLayer = profile.inputLayer === null ? 'cover'
+      : profile.inputLayer === 'cover' ? 'page' : null;
+    await chrome.storage.local.set({ profiles: profiles });
+  }
 });

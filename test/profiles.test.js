@@ -72,6 +72,30 @@ test('pluginId round-trips and defaults to null', () => {
   assert.equal(normalizeProfile({ pluginId: 42 }).pluginId, null);
 });
 
+test('a cover url keeps its path but must be http or https', () => {
+  assert.equal(normalizeProfile({}).coverUrl, null);
+  assert.equal(normalizeProfile({ coverUrl: 'https://example.com/board?q=1#top' }).coverUrl,
+    'https://example.com/board?q=1#top');
+  assert.equal(normalizeProfile({ coverUrl: '  http://localhost:3000/docs  ' }).coverUrl,
+    'http://localhost:3000/docs');
+  for (const bad of ['', '   ', 'example.com', 'javascript:alert(1)', 'data:text/html,x',
+                     'file:///tmp/x', 'not a url', 42, {}, null]) {
+    assert.equal(normalizeProfile({ coverUrl: bad }).coverUrl, null, String(bad));
+  }
+});
+
+// null is automatic, meaning follow the mode. It is the default because a single fixed
+// value cannot preserve both of the pre-split behaviours: peek let clicks through to the
+// page and cover blocked them, so either default silently breaks one of them.
+test('input layer defaults to automatic and accepts only the two explicit layers', () => {
+  assert.equal(normalizeProfile({}).inputLayer, null);
+  assert.equal(normalizeProfile({ inputLayer: 'cover' }).inputLayer, 'cover');
+  assert.equal(normalizeProfile({ inputLayer: 'page' }).inputLayer, 'page');
+  for (const bad of ['Page', ' page', '', 'both', 0, false, null, {}]) {
+    assert.equal(normalizeProfile({ inputLayer: bad }).inputLayer, null, String(bad));
+  }
+});
+
 test('the shared option list covers every boolean default and nothing else', () => {
   const { CT_PROFILE_OPTIONS, CT_DEFAULT_OPTIONS } = require('../src/lib/profiles.js');
   const listed = CT_PROFILE_OPTIONS.map((o) => o.key);
