@@ -58,3 +58,7 @@ node --test
 Covers the pure logic: mode decisions, origin normalisation and profile selection, skin
 resolution, and the registration set. DOM, focus, and permission behaviour can only be
 checked in a real browser.
+
+## License
+
+Apache 2.0. See [LICENSE](LICENSE).
