@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { CT_BUILTIN_SKINS, resolveSkin, listSkins } = require('../src/skins/index.js');
+const { CT_BUILTIN_SKINS, resolveSkin, listSkins, skinKind } = require('../src/skins/index.js');
 
 test('the built-in set is non-empty and every skin is complete', () => {
   assert.ok(CT_BUILTIN_SKINS.length >= 1);
@@ -56,6 +56,17 @@ test('a built-in wins an id collision with a plugin skin', () => {
                      favicon: 'data:,', faviconAlert: 'data:,', html: '<div class="ct-root"></div>', css: '' };
   const all = allSkins([{ id: 'p', skins: [impostor] }]);
   assert.equal(resolveSkin(all, CT_BUILTIN_SKINS[0].id).name, CT_BUILTIN_SKINS[0].name);
+});
+
+test('skinKind names an html skin and a url skin correctly', () => {
+  const htmlSkin = { id: 's', name: 'S', title: 'T', favicon: 'data:,', html: '<div class="ct-root"></div>', css: '' };
+  const urlSkin = { id: 's', name: 'S', title: 'T', favicon: 'data:,', url: 'https://example.com/' };
+  assert.equal(skinKind(htmlSkin), 'html');
+  assert.equal(skinKind(urlSkin), 'url');
+});
+
+test('skinKind calls every built-in html', () => {
+  for (const s of CT_BUILTIN_SKINS) assert.equal(skinKind(s), 'html', s.id);
 });
 
 test('allSkins tolerates plugins with no skins', () => {

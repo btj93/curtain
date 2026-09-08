@@ -5,10 +5,11 @@ const CT_PL = (typeof module !== 'undefined' && module.exports)
 const CT_PLUGIN_MAX_BYTES = 512 * 1024;
 // Becomes part of a chrome.userScripts registration id, which may not start with '_'.
 const CT_PLUGIN_ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
-const CT_SKIN_KEYS = ['id', 'name', 'title', 'favicon', 'html'];
+const CT_SKIN_KEYS = ['id', 'name', 'title', 'favicon'];
 // Optional, and carried through rather than dropped: the engine reads titleAlertPrefix and
 // faviconAlert, so stripping them here would silently disable every plugin skin's alert.
-const CT_SKIN_OPTIONAL = ['css', 'titleAlertPrefix', 'faviconAlert'];
+// html and url are optional here too; the union check below enforces exactly one of them.
+const CT_SKIN_OPTIONAL = ['css', 'titleAlertPrefix', 'faviconAlert', 'html', 'url'];
 
 function str(v) { return typeof v === 'string' ? v : null; }
 
@@ -60,6 +61,13 @@ function parsePlugin(raw) {
         if (s[k] == null) { out[k] = ''; continue; }
         if (typeof s[k] !== 'string') return { ok: false, error: 'Skin ' + k + ' must be text.' };
         out[k] = s[k];
+      }
+      if (out.html && out.url) return { ok: false, error: 'Skin cannot have both html and url.' };
+      if (!out.html && !out.url) return { ok: false, error: 'Skin must have html or url.' };
+      // Parsed here because a header rule is derived from this URL's origin, so junk would
+      // surface as a missing rule rather than as a bad cover.
+      if (out.url && !CT_PL.normalizeOrigin(out.url)) {
+        return { ok: false, error: 'Skin url must be an http or https address.' };
       }
       skins.push(out);
     }

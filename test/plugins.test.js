@@ -53,6 +53,32 @@ test('skins must be complete when present', () => {
   assert.equal(parsePlugin(Object.assign(good(), { skins: {} })).ok, false);
 });
 
+test('a url skin survives import with its url intact', () => {
+  const skin = { id: 's', name: 'S', title: 'T', favicon: 'data:,', url: 'https://example.com/' };
+  const got = parsePlugin(Object.assign(good(), { skins: [skin] })).plugin.skins[0];
+  assert.equal(got.url, 'https://example.com/');
+  assert.equal(got.html, '');
+});
+
+test('a skin with both html and url is rejected', () => {
+  const skin = { id: 's', name: 'S', title: 'T', favicon: 'data:,',
+                 html: '<div class="ct-root"></div>', url: 'https://example.com/' };
+  assert.equal(parsePlugin(Object.assign(good(), { skins: [skin] })).ok, false);
+});
+
+test('a skin with neither html nor url is rejected', () => {
+  const skin = { id: 's', name: 'S', title: 'T', favicon: 'data:,' };
+  assert.equal(parsePlugin(Object.assign(good(), { skins: [skin] })).ok, false);
+});
+
+test('an html skin still imports exactly as before', () => {
+  const skin = { id: 's', name: 'S', title: 'T', favicon: 'data:,', html: '<div class="ct-root"></div>', css: 'a{}' };
+  const got = parsePlugin(Object.assign(good(), { skins: [skin] })).plugin.skins[0];
+  assert.equal(got.html, '<div class="ct-root"></div>');
+  assert.equal(got.css, 'a{}');
+  assert.equal(got.url, '');
+});
+
 test('an oversized plugin is rejected rather than filling storage', () => {
   const r = parsePlugin(Object.assign(good(), { probe: 'x'.repeat(CT_PLUGIN_MAX_BYTES + 1) }));
   assert.equal(r.ok, false);
@@ -109,4 +135,15 @@ test('a non-string alert variant is rejected rather than coerced', () => {
   const skin = { id: 's', name: 'S', title: 'T', favicon: 'data:,a',
                  faviconAlert: 42, html: '<div class="ct-root"></div>', css: '' };
   assert.equal(parsePlugin(Object.assign(good(), { skins: [skin] })).ok, false);
+});
+
+test('a skin url must be a real http or https address', () => {
+  const skin = (url) => ({ id: 's', name: 'S', title: 'T', favicon: 'data:,a', url: url });
+  for (const bad of ['not a url', 'javascript:alert(1)', 'ftp://example.com', '']) {
+    const r = parsePlugin(Object.assign(good(), { skins: [skin(bad)] }));
+    assert.equal(r.ok, false, JSON.stringify(bad));
+  }
+  const ok = parsePlugin(Object.assign(good(), { skins: [skin('https://example.com/wiki/page')] }));
+  assert.equal(ok.ok, true);
+  assert.equal(ok.plugin.skins[0].url, 'https://example.com/wiki/page');
 });

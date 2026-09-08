@@ -10,6 +10,10 @@ function resolveSkin(skins, skinId) {
   return skins[0];
 }
 
+function skinKind(skin) {
+  return skin && skin.url ? 'url' : 'html';
+}
+
 function listSkins(skins) {
   return (skins || []).map(function (s) { return { id: s.id, name: s.name }; });
 }
@@ -25,5 +29,5 @@ function allSkins(plugins) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CT_BUILTIN_SKINS, resolveSkin, listSkins, allSkins };
+  module.exports = { CT_BUILTIN_SKINS, resolveSkin, listSkins, allSkins, skinKind };
 }
