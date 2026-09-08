@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { CT_DEFAULT_OPTIONS, normalizeOrigin, normalizeProfile, pickProfileForUrl, newProfileId } = require('../src/lib/profiles.js');
+const { CT_DEFAULT_OPTIONS, normalizeOrigin, normalizeProfile, pickProfileForUrl, repairProfiles, newProfileId } = require('../src/lib/profiles.js');
 
 test('origins are normalized by the URL parser', () => {
   assert.equal(normalizeOrigin('https://example.com'), 'https://example.com');
@@ -81,4 +81,28 @@ test('the shared option list covers every boolean default and nothing else', () 
     assert.ok(o.title, o.key + ' has no title');
     assert.ok(o.desc, o.key + ' has no description');
   }
+});
+
+test('repair clears a pluginId whose plugin is gone', () => {
+  const before = [normalizeProfile({ id: 'a', pluginId: 'gone', skinId: 'ide' })];
+  const after = repairProfiles(before, ['other'], ['ide']);
+  assert.equal(after[0].pluginId, null);
+  assert.equal(before[0].pluginId, 'gone', 'input was mutated');
+});
+
+test('repair falls a dangling skinId back to the first available skin', () => {
+  const before = [normalizeProfile({ id: 'a', skinId: 'vanished' })];
+  const after = repairProfiles(before, [], ['ide', 'other']);
+  assert.equal(after[0].skinId, 'ide');
+});
+
+test('repair leaves an intact profile untouched, by identity', () => {
+  const before = [normalizeProfile({ id: 'a', pluginId: 'demo', skinId: 'ide' })];
+  const after = repairProfiles(before, ['demo'], ['ide']);
+  assert.equal(after[0], before[0]);
+});
+
+test('repair with no skins at all leaves skinId alone rather than clearing it', () => {
+  const before = [normalizeProfile({ id: 'a', skinId: 'ide' })];
+  assert.equal(repairProfiles(before, [], [])[0].skinId, 'ide');
 });

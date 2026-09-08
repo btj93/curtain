@@ -4,6 +4,8 @@
 <style>
   body { max-width: 720px; margin: 0 auto; padding: 24px 20px 60px; font-family: -apple-system, system-ui, sans-serif; font-size: 14px; color: #1d1d1f; }
   h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 18px 0 4px; }
+  hr { border: 0; border-top: 1px solid #e0e0e4; margin: 22px 0; }
   .sub { color: #6e6e73; font-size: 13px; margin: 0 0 20px; }
   .card { border: 1px solid #e0e0e4; border-radius: 10px; padding: 16px; margin-bottom: 14px; }
   .card.disabled { opacity: .55; }
@@ -13,6 +15,7 @@
   .desc { color: #6e6e73; font-size: 11px; }
   input[type=text] { width: 100%; padding: 6px 8px; border: 1px solid #d0d0d5; border-radius: 6px; font: inherit; }
   textarea { width: 100%; min-height: 62px; padding: 6px 8px; border: 1px solid #d0d0d5; border-radius: 6px; font: 12px "SF Mono", Menlo, monospace; resize: vertical; }
+  textarea#pluginPaste { min-height: 90px; }
   select { padding: 5px 8px; border: 1px solid #d0d0d5; border-radius: 6px; font: inherit; }
   button { padding: 6px 12px; border: 0; border-radius: 7px; background: #0071e3; color: #fff; font: inherit; cursor: pointer; }
   button.danger { background: #f0f0f2; color: #c0392b; }
@@ -22,9 +25,26 @@
 </style>
 <h1>Curtain</h1>
 <p class="sub">A profile decides which sites get covered and what the cover looks like. The first enabled profile matching a page wins. Paste a page URL and it is reduced to its site.</p>
+<section id="plugins">
+  <h2>Plugins</h2>
+  <p class="sub">A plugin reads the page under the cover and reports its state through the
+  disguise. <strong>A plugin runs its author's code on every site the profile covers.</strong>
+  Install one only if you trust where it came from.</p>
+  <div id="userScriptsWarn" class="warn" hidden></div>
+  <div id="pluginList"></div>
+  <input type="file" id="pluginFile" accept=".json,application/json" />
+  <details>
+    <summary>or paste plugin JSON</summary>
+    <textarea id="pluginPaste" placeholder='{ "id": "demo", "name": "Demo", "probe": "…" }'></textarea>
+    <button id="pluginPasteBtn">Install pasted</button>
+  </details>
+  <div class="err" id="pluginErr"></div>
+</section>
+<hr />
 <div id="list"></div>
 <button id="add">Add profile</button>
 <script src="lib/profiles.js"></script>
+<script src="lib/plugins.js"></script>
 <script src="skins/ide.js"></script>
 <script src="skins/index.js"></script>
 <script src="options.js"></script>

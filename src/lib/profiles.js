@@ -65,10 +65,27 @@ function pickProfileForUrl(profiles, url) {
   return null;
 }
 
+// Removing a plugin takes its skins with it, and so does re-importing one that renamed or
+// dropped a skin, which is an ordinary update. A profile left pointing at either still
+// covers, because resolveSkin falls back, but its options dropdown renders blank and the
+// dead id survives in storage until the user happens to touch that control.
+// Takes plain id lists rather than the plugin objects, because plugins.js already requires
+// this file and importing it back would be circular.
+function repairProfiles(list, pluginIds, skinIds) {
+  const plugs = pluginIds || [];
+  const skins = skinIds || [];
+  return (list || []).map(function (p) {
+    const pluginId = (p.pluginId && plugs.indexOf(p.pluginId) !== -1) ? p.pluginId : null;
+    const skinId = (skins.length && skins.indexOf(p.skinId) === -1) ? skins[0] : p.skinId;
+    if (pluginId === p.pluginId && skinId === p.skinId) return p;
+    return Object.assign({}, p, { pluginId: pluginId, skinId: skinId });
+  });
+}
+
 function newProfileId() {
   return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CT_DEFAULT_OPTIONS, CT_PROFILE_OPTIONS, normalizeOrigin, normalizeProfile, pickProfileForUrl, newProfileId };
+  module.exports = { CT_DEFAULT_OPTIONS, CT_PROFILE_OPTIONS, normalizeOrigin, normalizeProfile, pickProfileForUrl, repairProfiles, newProfileId };
 }

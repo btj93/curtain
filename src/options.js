@@ -1,13 +1,103 @@
-const listEl = document.getElementById('list');
+const $ = (id) => document.getElementById(id);
+const listEl = $('list');
 let profiles = [];
+let plugins = [];
 
 async function load() {
-  const got = await chrome.storage.local.get({ profiles: [] });
+  const got = await chrome.storage.local.get({ profiles: [], plugins: [] });
   profiles = (got.profiles || []).map(normalizeProfile);
+  plugins = Array.isArray(got.plugins) ? got.plugins : [];
+  // Nothing fires when Chrome's Allow User Scripts toggle is flipped, so a plugin installed
+  // before it was on would stay unregistered. Opening this page asks for a fresh pass.
+  chrome.runtime.sendMessage({ type: 'reconcile' }).catch(() => {});
   render();
 }
 
 const save = () => chrome.storage.local.set({ profiles: profiles });
+
+// Throws on property access when the user has not allowed user scripts, so the check is a
+// try/catch around the read rather than a truthiness test.
+function userScriptsReady() {
+  try { return !!chrome.userScripts; } catch (_) { return false; }
+}
+
+async function commitPlugins(next) {
+  plugins = next;
+  profiles = repairProfiles(
+    profiles, plugins.map((p) => p.id), allSkins(plugins).map((s) => s.id));
+  try {
+    await chrome.storage.local.set({ plugins: plugins, profiles: profiles });
+  } catch (e) {
+    // Storage is finite and a rejected write is otherwise invisible: render() never runs
+    // and the user sees a plugin that looks installed and is not.
+    $('pluginErr').textContent = 'Could not save: ' + String(e.message || e);
+    await load();
+    return;
+  }
+  render();
+}
+
+async function installPlugin(raw) {
+  const r = parsePlugin(raw);
+  if (!r.ok) { $('pluginErr').textContent = r.error; return; }
+  $('pluginErr').textContent = '';
+  // Replaced in place rather than moved to the end, so an update does not silently
+  // reorder the installed list and every profile's plugin dropdown.
+  const at = plugins.findIndex((p) => p.id === r.plugin.id);
+  const next = plugins.slice();
+  if (at === -1) next.push(r.plugin); else next[at] = r.plugin;
+  await commitPlugins(next);
+}
+
+async function removePlugin(id) {
+  await commitPlugins(plugins.filter((p) => p.id !== id));
+}
+
+function renderPlugins() {
+  const el = $('pluginList');
+  el.innerHTML = '';
+  if (!plugins.length) {
+    const d = document.createElement('div');
+    d.className = 'desc';
+    d.textContent = 'No plugins installed.';
+    el.appendChild(d);
+    return;
+  }
+  plugins.forEach((pl) => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const name = document.createElement('span');
+    name.className = 'grow';
+    name.textContent = pl.name + ' ' + pl.version;
+    const rm = document.createElement('button');
+    rm.className = 'danger';
+    rm.textContent = 'Remove';
+    rm.addEventListener('click', () => removePlugin(pl.id));
+    row.append(name, rm);
+    el.appendChild(row);
+
+    const unused = pl.suggestedOrigins.filter(
+      (o) => !profiles.some((p) => p.origins.indexOf(o) !== -1));
+    if (!unused.length) return;
+    const sug = document.createElement('div');
+    sug.className = 'desc';
+    sug.textContent = 'Made for ' + unused.join(', ') + '. ';
+    const setup = document.createElement('button');
+    setup.textContent = 'Create a profile for it';
+    setup.addEventListener('click', async () => {
+      profiles = profiles.concat([normalizeProfile({
+        id: newProfileId(), name: pl.name, origins: unused, pluginId: pl.id,
+      })]);
+      await save();
+      try {
+        await chrome.permissions.request({ origins: unused.map((o) => o + '/*') });
+      } catch (_) { /* the profile card shows its own grant button */ }
+      render();
+    });
+    sug.appendChild(setup);
+    el.appendChild(sug);
+  });
+}
 
 // contains() resolves false for an ungranted origin but REJECTS for a malformed one, so a
 // throw must read as "no access" or a dead profile looks healthy.
@@ -21,6 +111,7 @@ async function hasAccess(origins) {
 }
 
 function render() {
+  renderPlugins();
   listEl.innerHTML = '';
   if (!profiles.length) {
     const d = document.createElement('div');
@@ -113,7 +204,7 @@ function card(p, index) {
   const skinRow = document.createElement('div');
   skinRow.className = 'row';
   const skinSel = document.createElement('select');
-  listSkins(CT_BUILTIN_SKINS).forEach((s) => {
+  listSkins(allSkins(plugins)).forEach((s) => {
     const o = document.createElement('option');
     o.value = s.id;
     o.textContent = s.name;
@@ -123,7 +214,20 @@ function card(p, index) {
   skinSel.addEventListener('change', () => { p.skinId = skinSel.value; save(); });
   const skinLabel = document.createElement('span');
   skinLabel.textContent = 'Cover:';
-  skinRow.append(skinLabel, skinSel);
+
+  const pluginSel = document.createElement('select');
+  [{ id: '', name: 'No plugin' }].concat(plugins).forEach((pl) => {
+    const o = document.createElement('option');
+    o.value = pl.id;
+    o.textContent = pl.name;
+    pluginSel.appendChild(o);
+  });
+  pluginSel.value = p.pluginId || '';
+  pluginSel.addEventListener('change', () => { p.pluginId = pluginSel.value || null; save(); });
+  const pluginLabel = document.createElement('span');
+  pluginLabel.textContent = 'Plugin:';
+
+  skinRow.append(skinLabel, skinSel, pluginLabel, pluginSel);
   el.appendChild(skinRow);
 
   CT_PROFILE_OPTIONS.forEach(({ key, title, desc }) => {
@@ -165,10 +269,30 @@ function card(p, index) {
   return el;
 }
 
-document.getElementById('add').addEventListener('click', async () => {
+$('add').addEventListener('click', async () => {
   profiles.push(normalizeProfile({ id: newProfileId(), name: 'New profile' }));
   await save();
   render();
 });
+
+$('pluginFile').addEventListener('change', async () => {
+  const f = $('pluginFile').files[0];
+  if (!f) return;
+  // Cleared so re-picking the same file after a fix still fires change.
+  $('pluginFile').value = '';
+  await installPlugin(await f.text());
+});
+
+$('pluginPasteBtn').addEventListener('click', async () => {
+  const raw = $('pluginPaste').value.trim();
+  if (raw) await installPlugin(raw);
+});
+
+if (!userScriptsReady()) {
+  const w = $('userScriptsWarn');
+  w.textContent = 'Chrome is blocking user scripts, so plugins cannot run. Open this '
+    + "extension's details page and turn on Allow User Scripts, then reload.";
+  w.hidden = false;
+}
 
 load();
