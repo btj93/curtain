@@ -3,7 +3,7 @@
   "name": "Curtain",
   "version": "0.1.0",
   "description": "Covers a page with a convincing work screen on a hotkey or when you look away.",
-  "permissions": ["storage", "scripting"],
+  "permissions": ["storage", "scripting", "activeTab"],
   "optional_host_permissions": ["*://*/*"],
   "background": { "service_worker": "src/background.js" },
   "commands": {

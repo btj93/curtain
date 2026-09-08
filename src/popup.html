@@ -2,19 +2,61 @@
 <meta charset="utf-8" />
 <title>Curtain</title>
 <style>
-  body { width: 240px; margin: 0; padding: 14px; font-family: -apple-system, system-ui, sans-serif; font-size: 13px; color: #1d1d1f; }
-  h1 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
-  .status { color: #6e6e73; font-size: 12px; margin-bottom: 12px; }
+  body { width: 268px; margin: 0; padding: 14px; font-family: -apple-system, system-ui, sans-serif; font-size: 13px; color: #1d1d1f; }
+  h1 { font-size: 15px; font-weight: 600; margin: 0 0 10px; }
+  .origin { font: 11px "SF Mono", Menlo, monospace; color: #1d1d1f; background: #f0f0f2; border-radius: 5px; padding: 5px 7px; word-break: break-all; margin-bottom: 10px; }
+  .muted { color: #6e6e73; font-size: 12px; margin-bottom: 10px; }
+  label.check { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; cursor: pointer; font-size: 12px; }
+  .desc { color: #6e6e73; font-size: 11px; margin-top: 1px; }
+  .slider { padding: 6px 0 2px 24px; }
+  .slider span { color: #6e6e73; font-size: 11px; }
+  .slider.off { opacity: .4; }
+  input[type=range] { width: 100%; }
+  select, input[type=text] { width: 100%; padding: 5px 7px; border: 1px solid #d0d0d5; border-radius: 6px; font: inherit; margin-bottom: 7px; }
   button { width: 100%; padding: 7px; border: 0; border-radius: 7px; background: #0071e3; color: #fff; font: inherit; cursor: pointer; margin-bottom: 7px; }
   button.ghost { background: #f0f0f2; color: #1d1d1f; }
-  button:disabled { opacity: .45; cursor: default; }
-  .hint { margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e5e7; color: #6e6e73; font-size: 11px; }
+  .warn { background: #fff5e6; border: 1px solid #f5c98a; border-radius: 7px; padding: 8px 10px; font-size: 11px; margin-bottom: 8px; }
+  .err { color: #c0392b; font-size: 11px; min-height: 14px; }
+  hr { border: 0; border-top: 1px solid #e5e5e7; margin: 10px 0; }
+  .hint { color: #6e6e73; font-size: 11px; margin-top: 8px; }
   kbd { background: #f0f0f2; border: 1px solid #d0d0d5; border-radius: 4px; padding: 1px 5px; font-size: 11px; }
 </style>
+
 <h1>Curtain</h1>
-<div class="status" id="status">Checking…</div>
-<button id="cover" disabled>Cover now</button>
-<button id="options" class="ghost">Profiles &amp; settings</button>
-<div class="hint">Hotkey: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>W</kbd> locks and unlocks the cover. Change it at <code>chrome://extensions/shortcuts</code>.</div>
+
+<section id="unsupported" hidden>
+  <div class="muted" id="unsupportedReason"></div>
+</section>
+
+<section id="unmatched" hidden>
+  <div class="muted">This site isn’t covered yet.</div>
+  <div class="origin" id="unmatchedOrigin"></div>
+  <select id="target"></select>
+  <input type="text" id="newName" placeholder="Profile name" hidden />
+  <button id="add">Add</button>
+  <div class="err" id="addErr"></div>
+</section>
+
+<section id="matched" hidden>
+  <div class="muted">Covered by <strong id="profileName"></strong>.</div>
+  <div class="origin" id="matchedOrigin"></div>
+  <div class="warn" id="grantWarn" hidden>
+    Curtain has no access to this site yet, so nothing is covered.
+    <button id="grant">Grant access</button>
+  </div>
+  <button id="cover">Cover now</button>
+  <hr />
+  <div id="opts"></div>
+  <div class="slider" id="peekRow">
+    <span>See-through cover opacity: <span id="peekVal"></span></span>
+    <input type="range" id="peekOpacity" min="40" max="95" step="5" />
+  </div>
+</section>
+
+<hr />
+<button id="options" class="ghost">All profiles &amp; settings</button>
+<div class="hint">Hotkey: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>W</kbd> locks and unlocks the cover.</div>
+
 <script src="lib/profiles.js"></script>
+<script src="lib/popup-state.js"></script>
 <script src="popup.js"></script>
