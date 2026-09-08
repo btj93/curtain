@@ -1,0 +1,58 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Unit tests
+        run: node --test
+
+      - name: Manifest parses
+        run: node -e "JSON.parse(require('fs').readFileSync('manifest.json','utf8'))"
+
+      - name: Every file the manifest names exists
+        run: |
+          node -e "
+          const fs = require('fs');
+          const m = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+          const paths = [m.background.service_worker, m.options_page, m.action.default_popup];
+          const missing = paths.filter((p) => !fs.existsSync(p));
+          if (missing.length) { console.error('missing:', missing.join(' ')); process.exit(1); }
+          "
+
+      - name: Every engine script exists, in load order
+        run: |
+          node -e "
+          const fs = require('fs');
+          const { CT_ENGINE_JS } = require('./src/registrar.js');
+          const missing = CT_ENGINE_JS.filter((p) => !fs.existsSync(p));
+          if (missing.length) { console.error('missing:', missing.join(' ')); process.exit(1); }
+          "
+
+      - name: Extension pages load no inline script
+        run: |
+          if grep -rlE '<script>' src/*.html; then
+            echo 'An inline <script> is silently blocked by the extension CSP.'
+            exit 1
+          fi
+
+      - name: Page scripts share one global scope without collision
+        run: |
+          cat src/lib/profiles.js src/lib/plugins.js src/skins/ide.js \
+              src/skins/index.js src/options.js > /tmp/options-bundle.js
+          node --check /tmp/options-bundle.js
+          cat src/lib/profiles.js src/lib/popup-state.js src/popup.js > /tmp/popup-bundle.js
+          node --check /tmp/popup-bundle.js
+
+      - name: Every source file parses
+        run: for f in $(find src test -name '*.js'); do node --check "$f"; done
