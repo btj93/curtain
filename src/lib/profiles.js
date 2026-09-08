@@ -3,6 +3,7 @@ const CT_DEFAULT_OPTIONS = {
   autoCover: true,
   mute: true,
   peekWhenFocused: true,
+  autoRevealOnAlert: false,
   peekOpacity: 0.8,
 };
 
@@ -15,6 +16,8 @@ const CT_PROFILE_OPTIONS = [
     desc: 'No audio leaks out of a window pretending to be something else.' },
   { key: 'peekWhenFocused', title: 'See-through cover while I’m looking',
     desc: 'Keeps a faint cover you can click straight through, instead of fully revealing the page.' },
+  { key: 'autoRevealOnAlert', title: 'Lift the cover when a plugin raises an alert',
+    desc: 'Reveals the real page the moment the plugin reports something needs you. Off by default, since it exposes the page on a shared screen.' },
 ];
 
 function normalizeOrigin(s) {

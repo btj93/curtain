@@ -63,8 +63,8 @@ const CT_SKIN_IDE = {
 .ct-sb-prob { opacity: .95; }
 .ct-sb-ok, .ct-sb-alert { font-variant-numeric: tabular-nums; }
 
-/* Dim by default: the indicator animates only on confirmed recent activity, so a static
-   icon honestly means "no recent signal" rather than decoration that always moves. */
+/* Dim by default. The engine only sets ct-on while a probe has recently reported live, so
+   a static icon means no recent signal rather than decoration that always moves. */
 .ct-sb-run { display: inline-flex; align-items: center; gap: 5px; opacity: .4; }
 .ct-sb-run.ct-on { opacity: 1; }
 .ct-sb-run.ct-on .ct-spinner { animation: ct-rot 1.1s linear infinite; display: inline-block; }

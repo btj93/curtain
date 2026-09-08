@@ -5,6 +5,7 @@ const CT_KEEPALIVE_ID = 'curtain-keepalive';
 const CT_ENGINE_JS = [
   'src/lib/profiles.js',
   'src/lib/overlay-state.js',
+  'src/lib/skin-binding.js',
   'src/skins/ide.js',
   'src/skins/index.js',
   'src/content.js',

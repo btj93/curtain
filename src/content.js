@@ -8,14 +8,27 @@
   let hostEl = null;
   let shadow = null;
   let chromeGuard = null;
+  let signal = CT_IDLE_SIGNAL;
+  let signalAt = 0;
+  let plugins = [];
+  // A probe must keep re-emitting to stay live. Held indefinitely, `live` would leave the
+  // indicator spinning after the probe died, which is the opposite of proof of life.
+  const CT_SIGNAL_STALE_MS = 15000;
   // Captured on first show, not at load: at document_start the page has set neither title
   // nor icon, so an early snapshot would later "restore" a blank title.
   const original = { title: null, captured: false };
   let realIconNodes = null;
 
   async function loadProfile() {
-    const { profiles } = await chrome.storage.local.get({ profiles: [] });
-    profile = pickProfileForUrl((profiles || []).map(normalizeProfile), location.href);
+    const got = await chrome.storage.local.get({ profiles: [], plugins: [] });
+    plugins = got.plugins || [];
+    profile = pickProfileForUrl((got.profiles || []).map(normalizeProfile), location.href);
+    // Dropped whenever the profile or plugin set changes. A standing alert would otherwise
+    // outlive the probe that raised it: detaching the plugin unregisters the probe, so no
+    // further signal can ever arrive, and with auto-reveal on the page stays uncovered
+    // forever with nothing left in the system able to clear it.
+    signal = CT_IDLE_SIGNAL;
+    signalAt = 0;
     if (!profile) { teardown(); return; }
     pushKeepAlive();
     recompute();
@@ -29,7 +42,7 @@
 
   loadProfile();
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.profiles) loadProfile();
+    if (area === 'local' && (changes.profiles || changes.plugins)) loadProfile();
   });
 
   const refocus = () => { focused = document.hasFocus(); recompute(); };
@@ -42,6 +55,12 @@
     if (f !== focused) { focused = f; recompute(); }
   }, 750);
 
+  window.addEventListener('__ct_signal', (e) => {
+    signal = e.detail || CT_IDLE_SIGNAL;
+    signalAt = Date.now();
+    recompute();
+  }, true);
+
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg && msg.type === 'toggle-cover' && profile) { manualForce = !manualForce; recompute(); }
   });
@@ -50,7 +69,7 @@
     if (!profile) return;
     applyMode(computeOverlayMode({
       manualForce: manualForce,
-      autoReveal: false,
+      autoReveal: !!(profile.options.autoRevealOnAlert && describeSkinUpdate(signal).alert),
       autoCover: profile.options.autoCover,
       focused: focused,
       peekWhenFocused: profile.options.peekWhenFocused,
@@ -89,7 +108,7 @@
     } catch (_) { /* extension context invalidated during a reload */ }
   }
 
-  function skin() { return resolveSkin(CT_BUILTIN_SKINS, profile && profile.skinId); }
+  function skin() { return resolveSkin(allSkins(plugins), profile && profile.skinId); }
 
   function ensureCover() {
     if (hostEl) return;
@@ -124,8 +143,12 @@
     // Re-captured every time the cover goes up, not once: a single-page app changes its
     // title as you navigate, and a one-shot snapshot would restore a stale one forever.
     // Skipped when the title is already ours, so a repeated show cannot capture the disguise.
+    // Both variants, because an alert-level cover carries the prefix. Comparing only the
+    // plain title would let a repeated show capture our own disguise as the page's title.
     const s0 = skin();
-    if (!s0 || document.title !== s0.title) {
+    const ours = s0 && (document.title === s0.title ||
+                        document.title === (s0.titleAlertPrefix || '') + s0.title);
+    if (!ours) {
       original.title = document.title;
       original.captured = true;
     }
@@ -154,8 +177,23 @@
   function applyDisguiseChrome() {
     const s = skin();
     if (!s) return;
-    if (document.title !== s.title) setTitle(s.title);
-    applyDisguiseFavicon(s.favicon);
+    const d = describeSkinUpdate(signal);
+    const want = (d.alert ? (s.titleAlertPrefix || '') : '') + s.title;
+    if (document.title !== want) setTitle(want);
+    applyDisguiseFavicon(d.alert ? (s.faviconAlert || s.favicon) : s.favicon);
+
+    const root = shadow && shadow.querySelector('.ct-root');
+    if (!root) return;
+    root.setAttribute('data-ct-level', d.level);
+    const label = root.querySelector('[data-ct-slot="label"]');
+    const count = root.querySelector('[data-ct-slot="count"]');
+    const live = root.querySelector('[data-ct-live]');
+    // textContent, never innerHTML: a probe is untrusted input to this function.
+    // The label is written even when null, clearing it to the skin's ::before glyph alone.
+    // Leaving it would show the skin's placeholder text as though a probe had reported it.
+    if (label) label.textContent = d.label == null ? '' : d.label;
+    if (count) count.textContent = d.count == null ? '' : d.count;
+    if (live) live.classList.toggle('ct-on', d.live && Date.now() - signalAt < CT_SIGNAL_STALE_MS);
   }
 
   function setTitle(t) { try { document.title = t; } catch (_) {} }
