@@ -126,13 +126,7 @@ function card(p, index) {
   skinRow.append(skinLabel, skinSel);
   el.appendChild(skinRow);
 
-  const OPTS = [
-    ['keepAlive', 'Keep the page running when unfocused', 'Spoofs page visibility so a site that pauses itself on blur keeps going. Cannot beat Chrome’s own throttling of hidden or covered windows.'],
-    ['autoCover', 'Cover automatically when I look away', 'Drops the cover the moment real focus leaves. Off means hotkey only.'],
-    ['mute', 'Mute the tab while covered', 'No audio leaks out of a window pretending to be something else.'],
-    ['peekWhenFocused', 'See-through cover while I’m looking', 'Keeps a faint cover you can click straight through, instead of fully revealing the page.'],
-  ];
-  OPTS.forEach(([key, title, desc]) => {
+  CT_PROFILE_OPTIONS.forEach(({ key, title, desc }) => {
     const l = document.createElement('label');
     l.className = 'check';
     const cb = document.createElement('input');

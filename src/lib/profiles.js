@@ -6,6 +6,17 @@ const CT_DEFAULT_OPTIONS = {
   peekOpacity: 0.8,
 };
 
+const CT_PROFILE_OPTIONS = [
+  { key: 'keepAlive', title: 'Keep the page running when unfocused',
+    desc: 'Spoofs page visibility so a site that pauses itself on blur keeps going. Cannot beat Chrome’s own throttling of hidden or covered windows.' },
+  { key: 'autoCover', title: 'Cover automatically when I look away',
+    desc: 'Drops the cover the moment real focus leaves. Off means hotkey only.' },
+  { key: 'mute', title: 'Mute the tab while covered',
+    desc: 'No audio leaks out of a window pretending to be something else.' },
+  { key: 'peekWhenFocused', title: 'See-through cover while I’m looking',
+    desc: 'Keeps a faint cover you can click straight through, instead of fully revealing the page.' },
+];
+
 function normalizeOrigin(s) {
   try {
     const u = new URL(String(s == null ? '' : s).trim());
@@ -58,5 +69,5 @@ function newProfileId() {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CT_DEFAULT_OPTIONS, normalizeOrigin, normalizeProfile, pickProfileForUrl, newProfileId };
+  module.exports = { CT_DEFAULT_OPTIONS, CT_PROFILE_OPTIONS, normalizeOrigin, normalizeProfile, pickProfileForUrl, newProfileId };
 }

@@ -64,3 +64,14 @@ test('pick returns the first enabled profile matching the origin', () => {
 test('ids are unique', () => {
   assert.notEqual(newProfileId(), newProfileId());
 });
+
+test('the shared option list covers every boolean default and nothing else', () => {
+  const { CT_PROFILE_OPTIONS, CT_DEFAULT_OPTIONS } = require('../src/lib/profiles.js');
+  const listed = CT_PROFILE_OPTIONS.map((o) => o.key);
+  const booleans = Object.keys(CT_DEFAULT_OPTIONS).filter((k) => typeof CT_DEFAULT_OPTIONS[k] === 'boolean');
+  assert.deepEqual(listed.slice().sort(), booleans.slice().sort());
+  for (const o of CT_PROFILE_OPTIONS) {
+    assert.ok(o.title, o.key + ' has no title');
+    assert.ok(o.desc, o.key + ' has no description');
+  }
+});
