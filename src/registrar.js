@@ -46,6 +46,40 @@ function desiredRegistrations(profiles, grantedOrigins) {
   return out;
 }
 
+function desiredUserScripts(profiles, plugins, grantedOrigins) {
+  const granted = grantedOrigins || [];
+  const byPlugin = {};
+
+  for (let i = 0; i < (profiles || []).length; i++) {
+    const p = profiles[i];
+    if (!p.enabled || !p.pluginId) continue;
+    for (let j = 0; j < p.origins.length; j++) {
+      if (granted.indexOf(p.origins[j]) === -1) continue;
+      if (!byPlugin[p.pluginId]) byPlugin[p.pluginId] = [];
+      pushUnique(byPlugin[p.pluginId], p.origins[j] + '/*');
+    }
+  }
+
+  const out = [];
+  Object.keys(byPlugin).forEach(function (id) {
+    let plugin = null;
+    for (let i = 0; i < (plugins || []).length; i++) if (plugins[i].id === id) plugin = plugins[i];
+    if (!plugin) return;
+    const matches = byPlugin[id];
+    out.push({
+      id: 'curtain-probe-' + id, matches: matches, js: [{ code: plugin.probe }],
+      world: 'USER_SCRIPT', runAt: 'document_start', allFrames: false,
+    });
+    if (plugin.page) {
+      out.push({
+        id: 'curtain-page-' + id, matches: matches, js: [{ code: plugin.page }],
+        world: 'MAIN', runAt: 'document_start', allFrames: false,
+      });
+    }
+  });
+  return out;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CT_ENGINE_ID, CT_KEEPALIVE_ID, CT_ENGINE_JS, desiredRegistrations };
+  module.exports = { CT_ENGINE_ID, CT_KEEPALIVE_ID, CT_ENGINE_JS, desiredRegistrations, desiredUserScripts };
 }

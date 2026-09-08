@@ -24,6 +24,31 @@ async function grantedOrigins(profiles) {
   return checks.filter(Boolean);
 }
 
+// Throws on property access when the user has not allowed user scripts, so every use is
+// behind this check rather than a try/catch at each call site.
+function userScriptsReady() {
+  try { return !!chrome.userScripts; } catch (_) { return false; }
+}
+
+async function loadPlugins() {
+  const { plugins } = await chrome.storage.local.get({ plugins: [] });
+  return plugins || [];
+}
+
+async function reconcileUserScripts(profiles, granted) {
+  if (!userScriptsReady()) return;
+  const desired = desiredUserScripts(profiles, await loadPlugins(), granted);
+  const existing = await chrome.userScripts.getScripts();
+  if (existing.length) {
+    try { await chrome.userScripts.unregister({ ids: existing.map((r) => r.id) }); }
+    catch (e) { console.error('[curtain] user script unregister failed', e); }
+  }
+  for (const r of desired) {
+    try { await chrome.userScripts.register([r]); }
+    catch (e) { console.error('[curtain] user script register failed', r.id, e); }
+  }
+}
+
 // Every trigger funnels here and re-derives the whole desired state, so a half-applied
 // previous run self-heals. Bursts coalesce (the opacity slider writes on every input
 // event) but are never dropped: a write landing mid-run re-runs after it.
@@ -48,6 +73,8 @@ async function reconcile() {
         try { await chrome.scripting.registerContentScripts([r]); }
         catch (e) { console.error('[curtain] register failed', r.id, e); }
       }
+
+      await reconcileUserScripts(profiles, granted);
     } catch (e) {
       console.error('[curtain] reconcile failed', e);
     } finally {
@@ -65,7 +92,7 @@ chrome.runtime.onStartup.addListener(reconcile);
 chrome.permissions.onAdded.addListener(reconcile);
 chrome.permissions.onRemoved.addListener(reconcile);
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === 'local' && changes.profiles) reconcile();
+  if (area === 'local' && (changes.profiles || changes.plugins)) reconcile();
 });
 
 // sender.tab.id is available without the "tabs" permission, and muting needs no permission
@@ -75,6 +102,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     chrome.tabs.update(sender.tab.id, { muted: !!msg.muted })
       .then(() => sendResponse({ ok: true }))
       .catch((e) => sendResponse({ ok: false, error: String(e) }));
+    return true;
+  }
+  // Nothing fires when the user flips Chrome's Allow User Scripts toggle, so a plugin
+  // installed before it was on would stay unregistered until an unrelated event. The
+  // options page asks for a pass whenever it opens.
+  if (msg && msg.type === 'reconcile') {
+    reconcile().then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: false }));
     return true;
   }
 });
