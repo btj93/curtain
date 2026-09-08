@@ -73,6 +73,12 @@ async function reconcile() {
         try { await chrome.scripting.registerContentScripts([r]); }
         catch (e) { console.error('[curtain] register failed', r.id, e); }
       }
+      // Logged because a stale registration fails far from its cause: an already-open tab
+      // keeps whatever file list it was injected with, so adding a file to CT_ENGINE_JS
+      // surfaces as a ReferenceError in content.js until both the extension and the tab
+      // are reloaded.
+      console.log('[curtain] registered',
+        desired.map((r) => r.id + ' (' + r.js.length + ' files) ' + r.matches.join(' ')).join(' | ') || 'nothing');
 
       await reconcileUserScripts(profiles, granted);
     } catch (e) {

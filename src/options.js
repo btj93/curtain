@@ -80,10 +80,15 @@ function renderPlugins() {
       (o) => !profiles.some((p) => p.origins.indexOf(o) !== -1));
     if (!unused.length) return;
     const sug = document.createElement('div');
-    sug.className = 'desc';
-    sug.textContent = 'Made for ' + unused.join(', ') + '. ';
+    sug.className = 'suggest';
+    const head = document.createElement('strong');
+    head.textContent = 'This plugin is not covering anything yet.';
+    const sites = document.createElement('code');
+    sites.textContent = unused.join('  ');
+    sug.append(head, document.createTextNode('It was built for '), sites,
+               document.createTextNode('.'));
     const setup = document.createElement('button');
-    setup.textContent = 'Create a profile for it';
+    setup.textContent = 'Cover ' + (unused.length === 1 ? 'this site' : 'these sites') + ' with it';
     setup.addEventListener('click', async () => {
       profiles = profiles.concat([normalizeProfile({
         id: newProfileId(), name: pl.name, origins: unused, pluginId: pl.id,
