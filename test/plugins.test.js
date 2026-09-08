@@ -87,3 +87,26 @@ test('an oversized JSON string is refused before it is parsed', () => {
   assert.equal(r.ok, false);
   assert.match(r.error, /too large/i);
 });
+
+test('a plugin skin keeps its alert variants through import', () => {
+  const skin = { id: 's', name: 'S', title: 'T', titleAlertPrefix: '! ',
+                 favicon: 'data:,a', faviconAlert: 'data:,b',
+                 html: '<div class="ct-root"></div>', css: '' };
+  const got = parsePlugin(Object.assign(good(), { skins: [skin] })).plugin.skins[0];
+  assert.equal(got.titleAlertPrefix, '! ');
+  assert.equal(got.faviconAlert, 'data:,b');
+});
+
+test('a plugin skin without alert variants gets empty ones, not missing keys', () => {
+  const skin = { id: 's', name: 'S', title: 'T', favicon: 'data:,a',
+                 html: '<div class="ct-root"></div>', css: '' };
+  const got = parsePlugin(Object.assign(good(), { skins: [skin] })).plugin.skins[0];
+  assert.equal(got.titleAlertPrefix, '');
+  assert.equal(got.faviconAlert, '');
+});
+
+test('a non-string alert variant is rejected rather than coerced', () => {
+  const skin = { id: 's', name: 'S', title: 'T', favicon: 'data:,a',
+                 faviconAlert: 42, html: '<div class="ct-root"></div>', css: '' };
+  assert.equal(parsePlugin(Object.assign(good(), { skins: [skin] })).ok, false);
+});

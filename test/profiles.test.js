@@ -65,6 +65,13 @@ test('ids are unique', () => {
   assert.notEqual(newProfileId(), newProfileId());
 });
 
+test('pluginId round-trips and defaults to null', () => {
+  assert.equal(normalizeProfile({}).pluginId, null);
+  assert.equal(normalizeProfile({ pluginId: 'demo' }).pluginId, 'demo');
+  assert.equal(normalizeProfile({ pluginId: '' }).pluginId, null);
+  assert.equal(normalizeProfile({ pluginId: 42 }).pluginId, null);
+});
+
 test('the shared option list covers every boolean default and nothing else', () => {
   const { CT_PROFILE_OPTIONS, CT_DEFAULT_OPTIONS } = require('../src/lib/profiles.js');
   const listed = CT_PROFILE_OPTIONS.map((o) => o.key);

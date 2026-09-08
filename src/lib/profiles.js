@@ -50,6 +50,7 @@ function normalizeProfile(raw) {
     enabled: p.enabled !== false,
     origins: origins,
     skinId: String(p.skinId || 'ide'),
+    pluginId: (typeof p.pluginId === 'string' && p.pluginId) ? p.pluginId : null,
     options: options,
   };
 }

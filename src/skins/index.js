@@ -14,6 +14,16 @@ function listSkins(skins) {
   return (skins || []).map(function (s) { return { id: s.id, name: s.name }; });
 }
 
+// Built-ins first, so resolveSkin's linear search returns one on an id collision. A plugin
+// cannot shadow a built-in skin by claiming its id.
+function allSkins(plugins) {
+  let out = CT_BUILTIN_SKINS.slice();
+  (plugins || []).forEach(function (p) {
+    if (p && Array.isArray(p.skins)) out = out.concat(p.skins);
+  });
+  return out;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CT_BUILTIN_SKINS, resolveSkin, listSkins };
+  module.exports = { CT_BUILTIN_SKINS, resolveSkin, listSkins, allSkins };
 }

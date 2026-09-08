@@ -5,7 +5,10 @@ const CT_PL = (typeof module !== 'undefined' && module.exports)
 const CT_PLUGIN_MAX_BYTES = 512 * 1024;
 // Becomes part of a chrome.userScripts registration id, which may not start with '_'.
 const CT_PLUGIN_ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
-const CT_SKIN_KEYS = ['id', 'name', 'title', 'favicon', 'html', 'css'];
+const CT_SKIN_KEYS = ['id', 'name', 'title', 'favicon', 'html'];
+// Optional, and carried through rather than dropped: the engine reads titleAlertPrefix and
+// faviconAlert, so stripping them here would silently disable every plugin skin's alert.
+const CT_SKIN_OPTIONAL = ['css', 'titleAlertPrefix', 'faviconAlert'];
 
 function str(v) { return typeof v === 'string' ? v : null; }
 
@@ -50,11 +53,13 @@ function parsePlugin(raw) {
       if (!s || typeof s !== 'object') return { ok: false, error: 'A skin is not an object.' };
       const out = {};
       for (const k of CT_SKIN_KEYS) {
-        const v = k === 'css' ? (s[k] == null ? '' : s[k]) : s[k];
-        if (typeof v !== 'string' || (k !== 'css' && !v)) {
-          return { ok: false, error: 'Skin is missing ' + k + '.' };
-        }
-        out[k] = v;
+        if (typeof s[k] !== 'string' || !s[k]) return { ok: false, error: 'Skin is missing ' + k + '.' };
+        out[k] = s[k];
+      }
+      for (const k of CT_SKIN_OPTIONAL) {
+        if (s[k] == null) { out[k] = ''; continue; }
+        if (typeof s[k] !== 'string') return { ok: false, error: 'Skin ' + k + ' must be text.' };
+        out[k] = s[k];
       }
       skins.push(out);
     }

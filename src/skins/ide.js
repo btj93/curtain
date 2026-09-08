@@ -2,11 +2,9 @@ const CT_SKIN_IDE = {
   id: 'ide',
   name: 'Code editor',
   title: 'auth.service.ts — api — Visual Studio Code',
-  favicon: 'data:image/svg+xml,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">' +
-    '<rect width="16" height="16" rx="3" fill="#0065a9"/>' +
-    '<text x="8" y="11.5" font-family="monospace" font-size="9" font-weight="700" ' +
-    'text-anchor="middle" fill="#fff">&lt;/&gt;</text></svg>'),
+  favicon: ctIdeIcon(false),
+  faviconAlert: ctIdeIcon(true),
+  titleAlertPrefix: '● ',
   css: `
 /* Inheritable properties cross the shadow boundary, and a page rule on the host element
    beats :host, so anything inheritable is set on .ct-root inside the tree. :host carries
@@ -63,10 +61,29 @@ const CT_SKIN_IDE = {
 .ct-statusbar { height: 22px; background: #007acc; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 12px; flex: 0 0 auto; }
 .ct-sb-left, .ct-sb-right { display: flex; gap: 16px; align-items: center; }
 .ct-sb-prob { opacity: .95; }
-.ct-sb-status { font-variant-numeric: tabular-nums; }
+.ct-sb-ok, .ct-sb-alert { font-variant-numeric: tabular-nums; }
+
+/* Dim by default: the indicator animates only on confirmed recent activity, so a static
+   icon honestly means "no recent signal" rather than decoration that always moves. */
+.ct-sb-run { display: inline-flex; align-items: center; gap: 5px; opacity: .4; }
+.ct-sb-run.ct-on { opacity: 1; }
+.ct-sb-run.ct-on .ct-spinner { animation: ct-rot 1.1s linear infinite; display: inline-block; }
+@keyframes ct-rot { to { transform: rotate(360deg); } }
+
+/* Exactly one status span shows per level. Only alert hides the liveness indicator, since
+   a warning does not mean dead. */
+.ct-root[data-ct-level="ok"] .ct-sb-alert { display: none; }
+.ct-root[data-ct-level="warn"] .ct-sb-ok { display: none; }
+.ct-root[data-ct-level="alert"] .ct-sb-ok { display: none; }
+.ct-root[data-ct-level="alert"] .ct-sb-run { display: none; }
+.ct-root[data-ct-level="warn"] .ct-statusbar { background: #9a6700; }
+.ct-root[data-ct-level="alert"] .ct-statusbar { background: #a1260d; }
+.ct-root[data-ct-level="alert"] .ct-sb-alert { font-weight: 700; }
+.ct-root[data-ct-level="warn"] .ct-sb-alert::before { content: "⚠ "; }
+.ct-root[data-ct-level="alert"] .ct-sb-alert::before { content: "✗ "; }
 `,
   html: `
-<div class="ct-root">
+<div class="ct-root" data-ct-level="ok">
   <div class="ct-titlebar">
     <span class="ct-tb-dot ct-red"></span><span class="ct-tb-dot ct-yellow"></span><span class="ct-tb-dot ct-green"></span>
     <span class="ct-tb-title">auth.service.ts — api</span>
@@ -136,11 +153,25 @@ const CT_SKIN_IDE = {
     </div>
   </div>
   <div class="ct-statusbar">
-    <span class="ct-sb-left"><span class="ct-sb-branch">⎇ main*</span><span>↻ 0↓ 1↑</span><span class="ct-sb-prob">⊗ 0  ⚠ 2</span><span class="ct-sb-status">✓ 12 passing</span></span>
+    <span class="ct-sb-left"><span class="ct-sb-branch">⎇ main*</span><span>↻ 0↓ 1↑</span><span class="ct-sb-prob">⊗ 0  ⚠ 2</span>
+      <span class="ct-sb-ok">✓ <span data-ct-slot="count">0</span> passing</span>
+      <span class="ct-sb-alert"><span data-ct-slot="label">Needs attention</span></span>
+      <span class="ct-sb-run" data-ct-live><span class="ct-spinner">↻</span> watching</span>
+    </span>
     <span class="ct-sb-right"><span>Ln 18, Col 2</span><span>Spaces: 2</span><span>UTF-8</span><span>TypeScript</span></span>
   </div>
 </div>`,
 };
+
+function ctIdeIcon(badge) {
+  return 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">' +
+    '<rect width="16" height="16" rx="3" fill="#0065a9"/>' +
+    '<text x="8" y="11.5" font-family="monospace" font-size="9" font-weight="700" ' +
+    'text-anchor="middle" fill="#fff">&lt;/&gt;</text>' +
+    (badge ? '<circle cx="12.5" cy="3.5" r="3" fill="#e51400" stroke="#fff" stroke-width="0.8"/>' : '') +
+    '</svg>');
+}
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { CT_SKIN_IDE };
