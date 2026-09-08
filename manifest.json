@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Curtain",
+  "version": "0.1.0",
+  "description": "Covers a page with a convincing work screen on a hotkey or when you look away.",
+  "permissions": ["storage", "scripting"],
+  "optional_host_permissions": ["*://*/*"],
+  "background": { "service_worker": "src/background.js" },
+  "commands": {
+    "toggle-cover": {
+      "suggested_key": { "default": "Alt+Shift+W" },
+      "description": "Lock/unlock the cover"
+    }
+  },
+  "options_page": "src/options.html",
+  "action": { "default_title": "Curtain", "default_popup": "src/popup.html" }
+}
